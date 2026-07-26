@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
+import sqlite3
 app=FastAPI()
 
 #request model to convert json to python object
@@ -10,8 +11,14 @@ class UrlRequest(BaseModel):
 
 
 #stores mapping of code to long _url
-#this is a python dictionary similar to hash map in c++
-url_database={}
+conn=sqlite3.connect("url_shortener.db",check_same_thread=False)
+cursor=conn.cursor()
+
+cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
+"code TEXT PRIMARY KEY," \
+"long_url TEXT NOT NULL)")
+conn.commit()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,8 +73,15 @@ def generateShortCode(long_url:str):
 
 #stores the long_url and its code in storage
 def saveUrl(long_url:str,code:str):
-    url_database[code]=long_url
+    cursor.execute("INSERT INTO urls(code,long_url) " \
+    "VALUES(?,?)",(code,long_url))
+    conn.commit()
 
 #retrieves the long_url and its code from storage
 def getLongUrl(code:str):
-    return url_database[code]
+    cursor.execute("SELECT long_url " \
+    "FROM urls " \
+    "WHERE code=?",(code,))
+
+    row=cursor.fetchone()
+    return row[0]

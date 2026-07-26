@@ -27,7 +27,11 @@ function App() {
 
     <button onClick={handleShortenUrl}>Shorten URL</button>
 
-    <p>Shortened Url: {shortUrl}</p>
+    <p>Shortened Url: 
+      <a href={shortUrl}>
+        {shortUrl}
+      </a>
+      </p>
     </div>
 
     

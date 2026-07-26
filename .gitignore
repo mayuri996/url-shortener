@@ -17,3 +17,5 @@ frontend/dist/
 
 # VS Code
 .vscode/
+
+*.db
