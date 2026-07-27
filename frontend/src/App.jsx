@@ -13,7 +13,8 @@ function App() {
     )
 
     const result=await response.json();
-    setShortUrl(result.short_url);
+    if (response.ok) setShortUrl(result.short_url);
+    else alert(JSON.stringify(result.detail,null,2))
   }
   return (
     <div>

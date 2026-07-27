@@ -1,13 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from fastapi.responses import RedirectResponse
 import sqlite3
 app=FastAPI()
 
 #request model to convert json to python object
 class UrlRequest(BaseModel):
-    url:str
+    url:HttpUrl
 
 
 #stores mapping of code to long _url
@@ -34,27 +34,36 @@ def home():
         "message":"Backend is working"
     }
 
-#this api returns a shortened code
+#this api returns a shortened url
 #call it when long url needs to be converted to short url
 @app.post('/shorten')
 def shortenUrl(request:UrlRequest):
-    long_url=request.url
-    code=generateShortCode(long_url)
-    
-    short_url=f"http://127.0.0.1:8000/{code}"
+    long_url=str(request.url)
 
-    #doesnt matter how we store it
-    saveUrl(long_url,code)
+    code=getCodeForUrl(long_url)
+
+    if code is None:
+        code=generateShortCode(long_url)
+        #doesnt matter how we store it
+        saveUrl(long_url,code)
+        
+    short_url=f"http://127.0.0.1:8000/{code}"
 
     return {
         "short_url":short_url
     }
+    
 
 #this api redirects to the long url using the short url code
 @app.get("/{short_code}")
 def redirectUrl(short_code:str):
     #doesnt matter where it comes from
     long_url=getLongUrl(short_code)
+    if long_url is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Short URL not found"
+        )
     return RedirectResponse(long_url)
 
 #this fn generates a short code for the given long url
@@ -73,15 +82,34 @@ def generateShortCode(long_url:str):
 
 #stores the long_url and its code in storage
 def saveUrl(long_url:str,code:str):
+
     cursor.execute("INSERT INTO urls(code,long_url) " \
     "VALUES(?,?)",(code,long_url))
     conn.commit()
 
-#retrieves the long_url and its code from storage
+#retrieves the long_url from storage
 def getLongUrl(code:str):
     cursor.execute("SELECT long_url " \
     "FROM urls " \
     "WHERE code=?",(code,))
 
     row=cursor.fetchone()
+    if row is None:
+        return None
     return row[0]
+
+
+#retrieves the code for a given long url
+def getCodeForUrl(long_url:str):
+    cursor.execute("SELECT code " \
+    "FROM urls " \
+    "WHERE long_url=?",(long_url,))
+
+    row=cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return row[0]
+
+    
