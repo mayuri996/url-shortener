@@ -5,7 +5,8 @@ function App() {
   const [url,setUrl]=useState("")
   const [shortUrl,setShortUrl]=useState("")
   async function  handleShortenUrl(){
-    const response=await fetch("http://127.0.0.1:8000/shorten",{"method":"POST",
+    try {
+      const response=await fetch("http://127.0.0.1:8000/shorten",{"method":"POST",
       headers:{
         "Content-Type":"application/json"
       },
@@ -13,8 +14,15 @@ function App() {
     )
 
     const result=await response.json();
+
     if (response.ok) setShortUrl(result.short_url);
-    else alert(JSON.stringify(result.detail,null,2))
+    else alert(JSON.stringify(result.detail,null,2));
+    }
+    catch (error) {
+      alert("Unable to connect to the server. Please try again.");
+    }
+    
+    
   }
   return (
     <div>

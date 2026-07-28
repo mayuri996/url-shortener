@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 import sqlite3
 app=FastAPI()
 
-#request model to convert json to python object
+#validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
 
