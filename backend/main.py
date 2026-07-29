@@ -15,7 +15,8 @@ conn=sqlite3.connect("url_shortener.db",check_same_thread=False)
 cursor=conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
-"code TEXT PRIMARY KEY," \
+"id INTEGER PRIMARY KEY AUTOINCREMENT, " \
+"code TEXT UNIQUE," \
 "long_url TEXT NOT NULL)")
 conn.commit()
 
@@ -43,9 +44,8 @@ def shortenUrl(request:UrlRequest):
     code=getCodeForUrl(long_url)
 
     if code is None:
-        code=generateShortCode(long_url)
         #doesnt matter how we store it
-        saveUrl(long_url,code)
+        code=saveUrl(long_url)
         
     short_url=f"http://127.0.0.1:8000/{code}"
 
@@ -66,26 +66,27 @@ def redirectUrl(short_code:str):
         )
     return RedirectResponse(long_url)
 
-#this fn generates a short code for the given long url
-#it uses polynomial hashing
-def generateShortCode(long_url:str):
-    hash_value=0
-    base=131
-    MOD=1000000007
-
-    #convert long_url to a polynomial hash
-    for c in long_url:
-        val=ord(c)
-        hash_value=(hash_value*base+val)%MOD
-
-    return str(hash_value)
-
 #stores the long_url and its code in storage
-def saveUrl(long_url:str,code:str):
+def saveUrl(long_url:str):
 
-    cursor.execute("INSERT INTO urls(code,long_url) " \
-    "VALUES(?,?)",(code,long_url))
+    #first insert in storage
+    #then use the last inserted id to generate base62 encoding
+    #then update the row with the code
+    #and return the code
+
+    cursor.execute("INSERT INTO urls (" \
+    "long_url) " \
+    "VALUES (?)",(long_url,))
+
+    url_id=cursor.lastrowid
+    code=encodeBase62(url_id)
+    cursor.execute("UPDATE urls " \
+    "SET code=? " \
+    "WHERE id=?",(code,url_id))
     conn.commit()
+
+    return code
+
 
 #retrieves the long_url from storage
 def getLongUrl(code:str):
@@ -112,4 +113,23 @@ def getCodeForUrl(long_url:str):
 
     return row[0]
 
-    
+def encodeBase62(url_id:int):
+    num=url_id
+    answer=""
+    chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+    base=62
+
+    while(num>0):
+        remainder=num%base
+        answer+=chars[remainder]
+        num//=base  
+
+    #reverse the string
+    answer=answer[::-1]
+
+    return answer
+
+
+
+
