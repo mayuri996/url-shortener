@@ -10,14 +10,15 @@ class UrlRequest(BaseModel):
     url:HttpUrl
 
 
-#stores mapping of code to long _url
+#stores mapping of code to long_url
 conn=sqlite3.connect("url_shortener.db",check_same_thread=False)
 cursor=conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
 "id INTEGER PRIMARY KEY AUTOINCREMENT, " \
 "code TEXT UNIQUE," \
-"long_url TEXT NOT NULL)")
+"long_url TEXT NOT NULL," \
+"click_count INTEGER NOT NULL DEFAULT 0)")
 conn.commit()
 
 
@@ -64,25 +65,51 @@ def redirectUrl(short_code:str):
             status_code=404,
             detail="Short URL not found"
         )
+
+    #update click count
+    updateClickCount(short_code)
     return RedirectResponse(long_url)
+
+#this api returns number of times a short url was clicked
+@app.get("/clicks/{short_code}")
+def getClicks(short_code:str):
+    clicks=getClickCount(short_code)
+
+    #if given short url does not exist, return 404
+    if clicks is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Short URL not found"
+        )
+
+    return {
+        "click_count":clicks
+    }
+
 
 #stores the long_url and its code in storage
 def saveUrl(long_url:str):
 
-    #first insert in storage
-    #then use the last inserted id to generate base62 encoding
+    #first add long_url in urls
+    #then use the last inserted id to encode long_url to base62 
     #then update the row with the code
-    #and return the code
+    #and then return the code
 
     cursor.execute("INSERT INTO urls (" \
     "long_url) " \
     "VALUES (?)",(long_url,))
 
     url_id=cursor.lastrowid
+
+    #encode based on auto increment id
     code=encodeBase62(url_id)
+
+    #update the code
     cursor.execute("UPDATE urls " \
     "SET code=? " \
     "WHERE id=?",(code,url_id))
+
+    #commit only after insert and update
     conn.commit()
 
     return code
@@ -130,6 +157,20 @@ def encodeBase62(url_id:int):
 
     return answer
 
+def updateClickCount(code:str):
+    cursor.execute("UPDATE urls " \
+    "SET click_count=click_count+1 " \
+    "WHERE code=?",(code,))
+    conn.commit()
 
+def getClickCount(code:str):
+    cursor.execute("SELECT click_count " \
+    "FROM urls " \
+    "WHERE code=?",(code,))
 
+    row=cursor.fetchone()
 
+    if row is None:
+        return None
+
+    return row[0]
