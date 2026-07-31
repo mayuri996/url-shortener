@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import {NavLink} from "react-router-dom";
 import './App.css'
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
           "Content-Type":"application/json"
         },
         body:JSON.stringify({url})}
-      )
+      );
 
       const result=await response.json();
 
@@ -29,6 +30,11 @@ function App() {
   }
   return (
     <div>
+      <nav>
+        <NavLink to="/">Home</NavLink> 
+        {" | "}
+        <NavLink to="/analytics">Analytics</NavLink>
+      </nav>
       <h1>Url Shortener</h1>
     <input
     type="text"
@@ -39,11 +45,14 @@ function App() {
 
     <button onClick={handleShortenUrl}>Shorten URL</button>
 
-    <p>Shortened Url: 
+    {shortUrl && (
+      <p>Shortened Url: 
       <a href={shortUrl}>
         {shortUrl}
       </a>
       </p>
+      )
+    }
     </div>
 
     

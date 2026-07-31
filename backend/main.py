@@ -45,7 +45,6 @@ def shortenUrl(request:UrlRequest):
     code=getCodeForUrl(long_url)
 
     if code is None:
-        #doesnt matter how we store it
         code=saveUrl(long_url)
         
     short_url=f"http://127.0.0.1:8000/{code}"
@@ -68,22 +67,28 @@ def redirectUrl(short_code:str):
 
     #update click count
     updateClickCount(short_code)
-    return RedirectResponse(long_url)
+    return RedirectResponse(
+        url=long_url,
+        status_code=307)
 
 #this api returns number of times a short url was clicked
-@app.get("/clicks/{short_code}")
-def getClicks(short_code:str):
-    clicks=getClickCount(short_code)
+@app.get("/stats/{short_code}")
+def getAnalytics(short_code:str):
+    stats=getStats(short_code)
 
     #if given short url does not exist, return 404
-    if clicks is None:
+    if stats is None:
         raise HTTPException(
             status_code=404,
             detail="Short URL not found"
         )
 
+    clicks=stats[0]
+    long_url=stats[1]
+
     return {
-        "click_count":clicks
+        "click_count":clicks,
+        "long_url":long_url
     }
 
 
@@ -163,8 +168,9 @@ def updateClickCount(code:str):
     "WHERE code=?",(code,))
     conn.commit()
 
-def getClickCount(code:str):
-    cursor.execute("SELECT click_count " \
+def getStats(code:str):
+    cursor.execute("SELECT click_count, "\
+    "long_url    " \
     "FROM urls " \
     "WHERE code=?",(code,))
 
@@ -173,4 +179,4 @@ def getClickCount(code:str):
     if row is None:
         return None
 
-    return row[0]
+    return row
