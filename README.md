@@ -9,6 +9,7 @@ A URL Shortener built using React, FastAPI and SQLite
 - SQLite
 
 ## Features
-- Generates unique short URLs using Base62-encoded auto-increment IDs
-- Stores URL mappings in SQLite
-- Redirects using FastAPI RedirectResponse
+- Generate unique short URLs using Base62-encoded auto-increment IDs
+- Store URL mappings in SQLite
+- Redirect using FastAPI RedirectResponse
+- View URL analytics
