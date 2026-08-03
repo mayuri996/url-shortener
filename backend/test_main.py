@@ -27,8 +27,8 @@ def test_shorten_url():
 
 def test_shorten_redirect_url():
     shorten_response=client.post("/shorten",json={
-            "url":"http://g.com"
-        })
+        "url":"http://google.com"
+    })
     
     assert shorten_response.status_code==200
 
@@ -47,3 +47,31 @@ def test_shorten_redirect_url():
     redirect_response=client.get(f"/{code}",follow_redirects=False)
 
     assert redirect_response.status_code==307
+
+def test_shorten_stats():
+    shorten_response=client.post("/shorten",json={
+        "url":"http://github.com"
+    })
+        
+    assert shorten_response.status_code==200
+
+    shorten_response_data=shorten_response.json()
+
+    assert "short_url" in shorten_response_data
+
+    assert shorten_response_data["short_url"].startswith("http://127.0.0.1:8000/")
+
+    short_url=shorten_response_data["short_url"]
+
+    parts=short_url.split('/')
+
+    code=parts[-1]
+
+    stats_response=client.get(f"/stats/{code}")
+
+    assert stats_response.status_code==200
+
+    stats_response_data=stats_response.json()
+
+    assert stats_response_data["click_count"]==0
+    assert stats_response_data["long_url"]=="http://github.com/"
