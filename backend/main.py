@@ -2,20 +2,28 @@ from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 from fastapi.responses import RedirectResponse
-import sqlite3
+import psycopg
+import os
+from dotenv import load_dotenv
 app=FastAPI()
+load_dotenv()
 
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
 
-
 #stores mapping of code to long_url
-conn=sqlite3.connect("url_shortener.db",check_same_thread=False)
+conn=psycopg.connect(
+    host=os.getenv("DB_HOST"),
+    port=os.getenv("DB_PORT"),
+    dbname=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD")
+)
 cursor=conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
-"id INTEGER PRIMARY KEY AUTOINCREMENT, " \
+"id SERIAL PRIMARY KEY, " \
 "code TEXT UNIQUE," \
 "long_url TEXT NOT NULL," \
 "click_count INTEGER NOT NULL DEFAULT 0)")
@@ -102,17 +110,19 @@ def saveUrl(long_url:str):
 
     cursor.execute("INSERT INTO urls (" \
     "long_url) " \
-    "VALUES (?)",(long_url,))
+    "VALUES (%s) " \
+    "RETURNING id",
+    (long_url,))
 
-    url_id=cursor.lastrowid
+    url_id=cursor.fetchone()[0]
 
     #encode based on auto increment id
     code=encodeBase62(url_id)
 
     #update the code
     cursor.execute("UPDATE urls " \
-    "SET code=? " \
-    "WHERE id=?",(code,url_id))
+    "SET code=%s " \
+    "WHERE id=%s",(code,url_id))
 
     #commit only after insert and update
     conn.commit()
@@ -124,7 +134,7 @@ def saveUrl(long_url:str):
 def getLongUrl(code:str):
     cursor.execute("SELECT long_url " \
     "FROM urls " \
-    "WHERE code=?",(code,))
+    "WHERE code=%s",(code,))
 
     row=cursor.fetchone()
     if row is None:
@@ -136,7 +146,7 @@ def getLongUrl(code:str):
 def getCodeForUrl(long_url:str):
     cursor.execute("SELECT code " \
     "FROM urls " \
-    "WHERE long_url=?",(long_url,))
+    "WHERE long_url=%s",(long_url,))
 
     row=cursor.fetchone()
 
@@ -165,14 +175,14 @@ def encodeBase62(url_id:int):
 def updateClickCount(code:str):
     cursor.execute("UPDATE urls " \
     "SET click_count=click_count+1 " \
-    "WHERE code=?",(code,))
+    "WHERE code=%s",(code,))
     conn.commit()
 
 def getStats(code:str):
     cursor.execute("SELECT click_count, "\
     "long_url    " \
     "FROM urls " \
-    "WHERE code=?",(code,))
+    "WHERE code=%s",(code,))
 
     row=cursor.fetchone()
 
