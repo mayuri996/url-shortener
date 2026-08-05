@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 app=FastAPI()
 load_dotenv()
-
+BASE_URL=os.getenv("BASE_URL")
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
@@ -55,7 +55,7 @@ def shortenUrl(request:UrlRequest):
     if code is None:
         code=saveUrl(long_url)
         
-    short_url=f"http://127.0.0.1:8000/{code}"
+    short_url=f"{BASE_URL}/{code}"
 
     return {
         "short_url":short_url

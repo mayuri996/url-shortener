@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from main import app
+from main import app,BASE_URL
 
 client=TestClient(app)
 
@@ -23,7 +23,7 @@ def test_shorten_url():
 
     assert "short_url" in data
 
-    assert data["short_url"].startswith("http://127.0.0.1:8000/")
+    assert data["short_url"].startswith(f"{BASE_URL}/")
 
 def test_shorten_redirect_url():
     shorten_response=client.post("/shorten",json={
@@ -36,7 +36,7 @@ def test_shorten_redirect_url():
 
     assert "short_url" in data
 
-    assert data["short_url"].startswith("http://127.0.0.1:8000/")
+    assert data["short_url"].startswith(f"{BASE_URL}/")
 
     short_url=data["short_url"]
 
@@ -59,7 +59,7 @@ def test_shorten_stats():
 
     assert "short_url" in shorten_response_data
 
-    assert shorten_response_data["short_url"].startswith("http://127.0.0.1:8000/")
+    assert shorten_response_data["short_url"].startswith(f"{BASE_URL}/")
 
     short_url=shorten_response_data["short_url"]
 
