@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 app=FastAPI()
 load_dotenv()
 BASE_URL=os.getenv("BASE_URL")
+FRONTEND_URL=os.getenv("FRONTEND_URL")
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
@@ -32,7 +33,7 @@ conn.commit()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]

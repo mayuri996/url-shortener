@@ -4,20 +4,22 @@ function Analytics(){
     const [clickCount,setClickCount]=useState("");
     const [longUrl,setLongUrl]=useState("");
     const [shortUrl,setShortUrl]=useState("");
-    const baseUrl="http://127.0.0.1:8000/";
+    const BACKEND_URL=import.meta.env.VITE_BACKEND_URL;
+    const URL_PREFIX=`${BACKEND_URL}/`;
     async function handleGetStats(){
         //handle network errors
         try{
             //first check if it is a valid short url
             //then, extract the code from the url
-            if (!shortUrl.startsWith(baseUrl)){
+            
+            if (!shortUrl.startsWith(URL_PREFIX)){
                 alert("Please enter a valid short URL.");
                 return;
             }
             
-            const shortCode=shortUrl.substring(baseUrl.length);
+            const shortCode=shortUrl.substring(URL_PREFIX.length);
             
-            const response=await fetch(`http://127.0.0.1:8000/stats/${shortCode}`,{
+            const response=await fetch(`${BACKEND_URL}/stats/${shortCode}`,{
                 "method":"GET",
                 headers:{
                     "Content-Type":"application/json"

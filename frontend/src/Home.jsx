@@ -5,11 +5,11 @@ import './App.css'
 function App() {
   const [url,setUrl]=useState("")
   const [shortUrl,setShortUrl]=useState("")
-
+  const BACKEND_URL=import.meta.env.VITE_BACKEND_URL
   async function  handleShortenUrl(){
     //handle network errors
     try {
-      const response=await fetch("http://127.0.0.1:8000/shorten",{
+      const response=await fetch(`${BACKEND_URL}/shorten`,{
         "method":"POST",
         headers:{
           "Content-Type":"application/json"
