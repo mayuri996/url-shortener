@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { NavLink } from "react-router-dom";
+
 function Analytics(){
     const [clickCount,setClickCount]=useState("");
     const [longUrl,setLongUrl]=useState("");
     const [shortUrl,setShortUrl]=useState("");
     const BACKEND_URL=import.meta.env.VITE_BACKEND_URL;
     const URL_PREFIX=`${BACKEND_URL}/`;
+    const [loading,setLoading]=useState(false);
+
     async function handleGetStats(){
+        setLoading(true);
+        setClickCount("");
+        setLongUrl("");
         //handle network errors
         try{
             //first check if it is a valid short url
@@ -14,6 +20,7 @@ function Analytics(){
             
             if (!shortUrl.startsWith(URL_PREFIX)){
                 alert("Please enter a valid short URL.");
+                setLoading(false);
                 return;
             }
             
@@ -40,27 +47,45 @@ function Analytics(){
         catch (e){
             alert("Unable to connect to the server. Please try again.");
         }
+        setLoading(false);
     }
     return (
         <div>
 
-            <nav>
-                <NavLink to="/">Home</NavLink>
+            <nav className="navbar">
+                <NavLink className={({isActive})=> isActive ? "active-link":"nav-link"}to="/">Home</NavLink>
                 {" | "}
-                <NavLink to="/analytics">Analytics</NavLink>
+                <NavLink className={({isActive})=> isActive ? "active-link":"nav-link"}  to="/analytics">Analytics</NavLink>
             </nav>
+            <br></br>
             <h1>Analytics</h1>
             <input
+            className="url-input"
             type="text" 
             placeholder="Enter short url" 
             value={shortUrl}
-            onChange={(e)=>setShortUrl(e.target.value)}/>
+            onChange={(e)=>{
+                setShortUrl(e.target.value);
+                setClickCount("")
+                setLongUrl("")}
+            }/>
+            <br></br>
+            <br></br>
             
-            <button onClick={handleGetStats}>Get Analytics</button>
+            <button className="click-button"
+             onClick={handleGetStats}>Get Analytics</button>
 
-            {clickCount!=="" && <p>Short URL: {shortUrl}</p>}
-            {clickCount && <p>Click Count: {clickCount}</p>}
-            {longUrl && <p>Original URL: {longUrl}</p>}
+            {loading &&<p>Loading stats...</p>}
+            
+            {clickCount!=="" && <p className="display-info">Short URL: <a 
+            href={shortUrl} 
+            target="_blank"
+            rel="noopener noreferrer">{shortUrl}</a></p>}
+            {clickCount!=="" && <p className="display-info">Click Count: {clickCount}</p>}
+            {longUrl && <p className="display-info">Original URL: <a 
+            href={longUrl}
+            target="_blank"
+            rel="noopener noreferrer">{longUrl}</a></p>}
         </div>
     );
 }
