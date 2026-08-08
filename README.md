@@ -2,6 +2,14 @@
 
 A URL Shortener built using React, FastAPI, and PostgreSQL
 
+## Screenshots
+
+### Home
+![Home page](screenshots/home.png)
+
+### Analytics
+![Analytics page](screenshots/analytics.png)
+
 ## Tech Stack
 - React
 - FastAPI
