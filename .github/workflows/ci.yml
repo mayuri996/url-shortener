@@ -2,11 +2,27 @@ name: CI
 
 on:
   push:
-  pull_request:
 
 jobs:
   backend:
     runs-on: ubuntu-latest
+
+    services:
+        postgres:
+            image: postgres:16
+            env:
+                POSTGRES_USER: postgres
+                POSTGRES_PASSWORD: postgres
+                POSTGRES_DB: test_db
+            ports: 
+                - 5432:5432
+
+    env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
 
     steps:
       - uses: actions/checkout@v4
