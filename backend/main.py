@@ -1,14 +1,20 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 from fastapi.responses import RedirectResponse
 import psycopg
 import os
 from dotenv import load_dotenv
+import time
+
 app=FastAPI()
 load_dotenv()
 BASE_URL=os.getenv("BASE_URL")
 FRONTEND_URL=os.getenv("FRONTEND_URL")
+
+RATE_LIMIT=5
+WINDOW_SECONDS=60
+rate_limit_store={}
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
@@ -48,8 +54,15 @@ def home():
 #this api returns a shortened url
 #call it when long url needs to be converted to short url
 @app.post('/shorten')
-def shortenUrl(request:UrlRequest):
-    long_url=str(request.url)
+def shortenUrl(request:Request,url_request:UrlRequest):
+    long_url=str(url_request.url)
+    client_ip=request.client.host
+
+    if is_rate_limited(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please try again later."
+        )
 
     code=getCodeForUrl(long_url)
 
@@ -191,3 +204,24 @@ def getStats(code:str):
         return None
 
     return row
+
+def is_rate_limited(ip):
+    current_time=time.time()
+    if ip not in rate_limit_store:
+        rate_limit_store[ip]={
+            "count":1,
+            "window_start":current_time
+        }
+        return False
+    record=rate_limit_store[ip]
+    elapsed_time=current_time-record["window_start"]
+
+    if elapsed_time>=WINDOW_SECONDS:
+        record["count"]=1
+        record["window_start"]=current_time
+        return False
+
+    if record["count"]>=RATE_LIMIT:
+        return True
+    record["count"]+=1
+    return False

@@ -1,7 +1,12 @@
 from fastapi.testclient import TestClient
-from main import app,BASE_URL
+from main import app,BASE_URL,rate_limit_store
+import pytest
 
 client=TestClient(app)
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    rate_limit_store.clear()
 
 def test_home():
     response=client.get("/")
@@ -75,3 +80,17 @@ def test_shorten_stats():
 
     assert stats_response_data["click_count"]==0
     assert stats_response_data["long_url"]=="http://github.com/"
+
+def test_rate_limit():
+    for i in range(5):
+        response=client.post("/shorten",json={
+            "url":"https://google.com"
+        })
+
+        assert response.status_code==200
+
+    response=client.post("/shorten",json={
+        "url":"https://google.com"
+    })
+
+    assert response.status_code==429

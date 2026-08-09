@@ -21,9 +21,11 @@ function App() {
       );
 
       const result=await response.json();
-
       if (response.ok) setShortUrl(result.short_url);
-      else alert(result.detail[0].msg,null,2);
+      else if (typeof result.detail=="string"){
+        alert(result.detail);
+      }
+      else alert(result.detail[0].msg);
     }
     catch (error) {
       alert("Unable to connect to the server. Please try again.");
