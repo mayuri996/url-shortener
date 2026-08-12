@@ -33,7 +33,8 @@ cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
 "id SERIAL PRIMARY KEY, " \
 "code TEXT UNIQUE," \
 "long_url TEXT NOT NULL," \
-"click_count INTEGER NOT NULL DEFAULT 0)")
+"click_count INTEGER NOT NULL DEFAULT 0, " \
+"created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
 conn.commit()
 
 
@@ -106,10 +107,12 @@ def getAnalytics(short_code:str):
         )
 
     clicks=stats[0]
-    long_url=stats[1]
+    created_at=stats[1]
+    long_url=stats[2]
 
     return {
         "click_count":clicks,
+        "created_at":created_at,
         "long_url":long_url
     }
 
@@ -123,8 +126,8 @@ def saveUrl(long_url:str):
     #and then return the code
 
     cursor.execute("INSERT INTO urls (" \
-    "long_url) " \
-    "VALUES (%s) " \
+    "long_url, created_at) " \
+    "VALUES (%s,NOW()) " \
     "RETURNING id",
     (long_url,))
 
@@ -194,7 +197,7 @@ def updateClickCount(code:str):
 
 def getStats(code:str):
     cursor.execute("SELECT click_count, "\
-    "long_url    " \
+    "to_char(created_at, 'dd Mon YYYY HH24:MI:SS OF') as created_at, long_url    " \
     "FROM urls " \
     "WHERE code=%s",(code,))
 
@@ -205,6 +208,7 @@ def getStats(code:str):
 
     return row
 
+#protects shorten url endpoint from getting more than 5 requests within 60 seconds in the same process
 def is_rate_limited(ip):
     current_time=time.time()
     if ip not in rate_limit_store:

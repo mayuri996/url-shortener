@@ -8,11 +8,13 @@ function Analytics(){
     const BACKEND_URL=import.meta.env.VITE_BACKEND_URL;
     const URL_PREFIX=`${BACKEND_URL}/`;
     const [loading,setLoading]=useState(false);
+    const [createdAt,setCreatedAt]=useState("");
 
     async function handleGetStats(){
         setLoading(true);
         setClickCount("");
         setLongUrl("");
+        setCreatedAt("");
         //handle network errors
         try{
             //first check if it is a valid short url
@@ -37,6 +39,7 @@ function Analytics(){
 
             if (response.ok){
                 setClickCount(result.click_count);
+                setCreatedAt(result.created_at);
                 setLongUrl(result.long_url);
             }
             else{
@@ -66,8 +69,10 @@ function Analytics(){
             value={shortUrl}
             onChange={(e)=>{
                 setShortUrl(e.target.value);
-                setClickCount("")
-                setLongUrl("")}
+                setClickCount("");  
+                setCreatedAt("");
+                setLongUrl("");
+            }
             }/>
             <br></br>
             <br></br>
@@ -82,6 +87,7 @@ function Analytics(){
             target="_blank"
             rel="noopener noreferrer">{shortUrl}</a></p>}
             {clickCount!=="" && <p className="display-info">Click Count: {clickCount}</p>}
+            {clickCount!=="" && <p className="display-info">Created At: {createdAt}</p>}
             {longUrl && <p className="display-info">Original URL: <a 
             href={longUrl}
             target="_blank"
