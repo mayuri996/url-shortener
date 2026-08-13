@@ -92,7 +92,7 @@ function Analytics(){
             rel="noopener noreferrer">{shortUrl}</a></p>}
             {clickCount!=="" && <p className="display-info">Click Count: {clickCount}</p>}
             {clickCount!=="" && <p className="display-info">Created At: {createdAt}</p>}
-            {clickCount!==0 && clickCount!==""&& <p className="display-info">Last Clicked At: {lastClickedAt}</p>}
+            {lastClickedAt!==""&& <p className="display-info">Last Clicked At: {lastClickedAt}</p>}
             {longUrl && <p className="display-info">Original URL: <a 
             href={longUrl}
             target="_blank"
