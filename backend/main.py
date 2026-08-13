@@ -34,7 +34,8 @@ cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
 "code TEXT UNIQUE," \
 "long_url TEXT NOT NULL," \
 "click_count INTEGER NOT NULL DEFAULT 0, " \
-"created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+"created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), " \
+"last_clicked_at TIMESTAMPTZ)")
 conn.commit()
 
 
@@ -88,8 +89,7 @@ def redirectUrl(short_code:str):
             detail="Short URL not found"
         )
 
-    #update click count
-    updateClickCount(short_code)
+    updateStats(short_code)
     return RedirectResponse(
         url=long_url,
         status_code=307)
@@ -108,11 +108,13 @@ def getAnalytics(short_code:str):
 
     clicks=stats[0]
     created_at=stats[1]
-    long_url=stats[2]
+    last_clicked_at=stats[2]
+    long_url=stats[3]
 
     return {
         "click_count":clicks,
         "created_at":created_at,
+        "last_clicked_at":last_clicked_at,
         "long_url":long_url
     }
 
@@ -189,15 +191,18 @@ def encodeBase62(url_id:int):
 
     return answer
 
-def updateClickCount(code:str):
+def updateStats(code:str):
     cursor.execute("UPDATE urls " \
-    "SET click_count=click_count+1 " \
+    "SET click_count=click_count+1, " \
+    "last_clicked_at=NOW() " \
     "WHERE code=%s",(code,))
     conn.commit()
 
 def getStats(code:str):
     cursor.execute("SELECT click_count, "\
-    "to_char(created_at, 'dd Mon YYYY HH24:MI:SS OF') as created_at, long_url    " \
+    "to_char(created_at, 'dd Mon YYYY HH24:MI:SS OF') as created_at, " \
+    "to_char(last_clicked_at,'dd Mon YYYY HH24:MI:SS OF') as last_clicked_at, " \
+    "long_url    " \
     "FROM urls " \
     "WHERE code=%s",(code,))
 

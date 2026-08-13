@@ -9,12 +9,14 @@ function Analytics(){
     const URL_PREFIX=`${BACKEND_URL}/`;
     const [loading,setLoading]=useState(false);
     const [createdAt,setCreatedAt]=useState("");
+    const [lastClickedAt,setLastClickedAt]=useState("");
 
     async function handleGetStats(){
         setLoading(true);
         setClickCount("");
         setLongUrl("");
         setCreatedAt("");
+        setLastClickedAt("");
         //handle network errors
         try{
             //first check if it is a valid short url
@@ -40,6 +42,7 @@ function Analytics(){
             if (response.ok){
                 setClickCount(result.click_count);
                 setCreatedAt(result.created_at);
+                setLastClickedAt(result.last_clicked_at);
                 setLongUrl(result.long_url);
             }
             else{
@@ -71,6 +74,7 @@ function Analytics(){
                 setShortUrl(e.target.value);
                 setClickCount("");  
                 setCreatedAt("");
+                setLastClickedAt("");
                 setLongUrl("");
             }
             }/>
@@ -88,6 +92,7 @@ function Analytics(){
             rel="noopener noreferrer">{shortUrl}</a></p>}
             {clickCount!=="" && <p className="display-info">Click Count: {clickCount}</p>}
             {clickCount!=="" && <p className="display-info">Created At: {createdAt}</p>}
+            {clickCount!==0 && clickCount!==""&& <p className="display-info">Last Clicked At: {lastClickedAt}</p>}
             {longUrl && <p className="display-info">Original URL: <a 
             href={longUrl}
             target="_blank"
