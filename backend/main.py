@@ -1,23 +1,30 @@
 from fastapi import FastAPI,HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, EmailStr
 from fastapi.responses import RedirectResponse
 import psycopg
 import os
 from dotenv import load_dotenv
 import time
-
+import bcrypt
 app=FastAPI()
 load_dotenv()
+
 BASE_URL=os.getenv("BASE_URL")
 FRONTEND_URL=os.getenv("FRONTEND_URL")
 
 RATE_LIMIT=5
 WINDOW_SECONDS=60
 rate_limit_store={}
+
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
+#define model for user
+class User(BaseModel):
+    email:EmailStr
+    user_name:str
+    password:str
 
 #stores mapping of code to long_url
 conn=psycopg.connect(
@@ -29,19 +36,20 @@ conn=psycopg.connect(
 )
 cursor=conn.cursor()
 
+cursor.execute("CREATE TABLE IF NOT EXISTS users(" \
+"user_id SERIAL PRIMARY KEY, " \
+"email TEXT UNIQUE NOT NULL, " \
+"user_name TEXT NOT NULL, " \
+"password_hash TEXT NOT NULL )")
+
 cursor.execute("CREATE TABLE IF NOT EXISTS urls(" \
-"id SERIAL PRIMARY KEY, " \
+"url_id SERIAL PRIMARY KEY, " \
 "code TEXT UNIQUE," \
 "long_url TEXT NOT NULL," \
 "click_count INTEGER NOT NULL DEFAULT 0, " \
 "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), " \
-"last_clicked_at TIMESTAMPTZ)")
-
-cursor.execute("CREATE TABLE IF NOT EXISTS users(" \
-"id SERIAL PRIMARY KEY, " \
-"email TEXT UNIQUE NOT NULL, " \
-"user_name TEXT NOT NULL, " \
-"password_hash TEXT NOT NULL )")
+"last_clicked_at TIMESTAMPTZ, " \
+"user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE)")
 
 conn.commit()
 
@@ -125,6 +133,22 @@ def getAnalytics(short_code:str):
         "long_url":long_url
     }
 
+#define register endpoint
+@app.post("/register")
+def registerUser(user: User):
+    #TODO: store user in database
+    status=saveUser(user)
+
+    if status is True:
+        return {
+            "message":"User created successfully."
+        }
+
+    else:
+        raise HTTPException(
+            status_code=409,
+            detail="User already exists")
+    
 
 #stores the long_url and its code in storage
 def saveUrl(long_url:str):
@@ -137,7 +161,7 @@ def saveUrl(long_url:str):
     cursor.execute("INSERT INTO urls (" \
     "long_url, created_at) " \
     "VALUES (%s,NOW()) " \
-    "RETURNING id",
+    "RETURNING url_id",
     (long_url,))
 
     url_id=cursor.fetchone()[0]
@@ -148,7 +172,7 @@ def saveUrl(long_url:str):
     #update the code
     cursor.execute("UPDATE urls " \
     "SET code=%s " \
-    "WHERE id=%s",(code,url_id))
+    "WHERE url_id=%s",(code,url_id))
 
     #commit only after insert and update
     conn.commit()
@@ -241,3 +265,38 @@ def is_rate_limited(ip):
         return True
     record["count"]+=1
     return False
+
+def hash_password(password:str):
+    salt=bcrypt.gensalt()
+    byte_password=password.encode("utf-8")
+    hashed=bcrypt.hashpw(byte_password,salt)
+    return hashed.decode("utf-8")
+
+def saveUser(user:User):
+    email=user.email
+    user_name=user.user_name
+    password=user.password
+
+    #first check if user already exists in db
+    cursor.execute("SELECT user_id " \
+    "FROM users " \
+    "WHERE email=%s",(email,))
+
+    row=cursor.fetchone()
+
+    #return false when user already exist
+    if row is not None:
+        return False
+
+    password_hash=hash_password(password)
+
+    #else, save new user
+    cursor.execute("INSERT INTO users(" \
+    "email,user_name,password_hash) " \
+    "VALUES (%s,%s,%s)",(email,user_name,password_hash))
+    conn.commit()
+
+    return True
+
+    
+
