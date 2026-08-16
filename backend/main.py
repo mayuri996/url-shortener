@@ -20,12 +20,16 @@ rate_limit_store={}
 #validate the url 
 class UrlRequest(BaseModel):
     url:HttpUrl
-#define model for user
-class User(BaseModel):
+#define model for user register
+class UserRegister(BaseModel):
     email:EmailStr
     user_name:str
     password:str
 
+#define model for user login
+class UserLogin(BaseModel):
+    email:EmailStr
+    password:str
 #stores mapping of code to long_url
 conn=psycopg.connect(
     host=os.getenv("DB_HOST"),
@@ -92,23 +96,6 @@ def shortenUrl(request:Request,url_request:UrlRequest):
         "short_url":short_url
     }
     
-
-#this api redirects to the long url using the short url code
-@app.get("/{short_code}")
-def redirectUrl(short_code:str):
-    #doesnt matter where it comes from
-    long_url=getLongUrl(short_code)
-    if long_url is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Short URL not found"
-        )
-
-    updateStats(short_code)
-    return RedirectResponse(
-        url=long_url,
-        status_code=307)
-
 #this api returns number of times a short url was clicked
 @app.get("/stats/{short_code}")
 def getAnalytics(short_code:str):
@@ -135,8 +122,7 @@ def getAnalytics(short_code:str):
 
 #define register endpoint
 @app.post("/register")
-def registerUser(user: User):
-    #TODO: store user in database
+def registerUser(user: UserRegister):
     status=saveUser(user)
 
     if status is True:
@@ -149,6 +135,49 @@ def registerUser(user: User):
             status_code=409,
             detail="User already exists")
     
+#define login endpoint
+@app.post("/login")
+def loginUser(user:UserLogin):
+    email=user.email
+    password=user.password
+    #TODO: authenticate user
+    password_hash=findUser(email)
+
+    if password_hash is None:
+        #TODO: handle return
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    password_match=verify_password(password,password_hash)
+
+    if not password_match:
+        #TODO: handle return
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    return {
+        "message":"Login successful"
+    }
+
+#this api redirects to the long url using the short url code
+@app.get("/{short_code}")
+def redirectUrl(short_code:str):
+    #doesnt matter where it comes from
+    long_url=getLongUrl(short_code)
+    if long_url is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Short URL not found"
+        )
+
+    updateStats(short_code)
+    return RedirectResponse(
+        url=long_url,
+        status_code=307)
 
 #stores the long_url and its code in storage
 def saveUrl(long_url:str):
@@ -272,7 +301,7 @@ def hash_password(password:str):
     hashed=bcrypt.hashpw(byte_password,salt)
     return hashed.decode("utf-8")
 
-def saveUser(user:User):
+def saveUser(user:UserRegister):
     email=user.email
     user_name=user.user_name
     password=user.password
@@ -298,5 +327,35 @@ def saveUser(user:User):
 
     return True
 
+
+def findUser(email:str):
+
+    cursor.execute("SELECT password_hash " \
+    "FROM users " \
+    "WHERE email=%s",(email,))
+
+    row=cursor.fetchone()
+
+    #return none if user not registered
+    if row is None:
+        return None
+
+    password_hash=row[0]
+
+    return password_hash
+
+def verify_password(password:str,password_hash:str):
+    
+    #check user password
+    byte_curr_password=password.encode("utf-8")
+    byte_password_hash=password_hash.encode("utf-8")
+
+    #return true if password is correct, else return false
+    password_match= bcrypt.checkpw(byte_curr_password,byte_password_hash)
+
+    if not password_match:
+        return False
+
+    return True
     
 
