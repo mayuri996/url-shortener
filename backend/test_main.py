@@ -1,12 +1,17 @@
 from fastapi.testclient import TestClient
-from main import app,BASE_URL,rate_limit_store
+from main import app,BASE_URL,rate_limit_store,cursor,conn
 import pytest
 
 client=TestClient(app)
 
 @pytest.fixture(autouse=True)
-def reset_rate_limiter():
+def reset_test_state():
+    #reset rate limiter,users, and url records before each test
     rate_limit_store.clear()
+    cursor.execute("DELETE FROM URLS")
+    cursor.execute("DELETE FROM USERS")
+
+    conn.commit()
 
 def test_home():
     response=client.get("/")
@@ -127,3 +132,29 @@ def test_rate_limit():
     })
 
     assert response.status_code==429
+
+def test_register_user():
+    register_response=client.post("/register",json={
+        "email":"user@example.com",
+        "user_name":"string",
+        "password":"string"
+    })
+
+    assert register_response.status_code==200
+
+def test_login_user():
+    register_response=client.post("/register",json={
+            "email":"login@example.com",
+            "user_name":"string",
+            "password":"string"
+        })
+    
+    assert register_response.status_code==200
+
+    login_response=client.post("/login",json={
+        "email":"login@example.com",
+        "password":"string"
+    })
+
+    assert login_response.status_code==200
+
