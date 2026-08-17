@@ -7,6 +7,10 @@ import os
 from dotenv import load_dotenv
 import time
 import bcrypt
+import jwt
+import datetime
+from datetime import timezone,timedelta,datetime
+
 app=FastAPI()
 load_dotenv()
 
@@ -17,8 +21,12 @@ RATE_LIMIT=5
 WINDOW_SECONDS=60
 rate_limit_store={}
 
+JWT_ALGORITHM="HS256"
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=timedelta(minutes=15)
+JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY")
+
 #validate the url 
-class UrlRequest(BaseModel):
+class validUrl(BaseModel):
     url:HttpUrl
 #define model for user register
 class UserRegister(BaseModel):
@@ -30,6 +38,12 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email:EmailStr
     password:str
+
+#model for jwt token
+class JWTToken(BaseModel):
+    access_token:str
+    token_type:str
+
 #stores mapping of code to long_url
 conn=psycopg.connect(
     host=os.getenv("DB_HOST"),
@@ -75,8 +89,8 @@ def home():
 #this api returns a shortened url
 #call it when long url needs to be converted to short url
 @app.post('/shorten')
-def shortenUrl(request:Request,url_request:UrlRequest):
-    long_url=str(url_request.url)
+def shortenUrl(request:Request,valid_url:validUrl):
+    long_url=str(valid_url.url)
     client_ip=request.client.host
 
     if is_rate_limited(client_ip):
@@ -158,6 +172,14 @@ def loginUser(user:UserLogin):
             status_code=401,
             detail="Invalid email or password"
         )
+
+    #generate jwt token
+    user_id=findUserId(email)
+    token_expiry_time=datetime.now(timezone.utc)+JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+
+
+
+    jwt_access_token=create_jwt_access_token({"sub":user_id,"exp":token_expiry_time})
 
     return {
         "message":"Login successful"
@@ -357,5 +379,25 @@ def verify_password(password:str,password_hash:str):
         return False
 
     return True
-    
 
+#this function creates a jwt access token for a given payload and timedelta
+def create_jwt_access_token(payload:dict):
+
+    encoded_jwt_token=jwt.encode(payload,JWT_SECRET_KEY,JWT_ALGORITHM)
+
+    return encoded_jwt_token
+
+
+def findUserId(email:str):
+    cursor.execute("SELECT user_id " \
+    "FROM users " \
+    "WHERE email=%s",(email,))
+
+    row=cursor.fetchone()
+
+    if row is None:
+        return None
+
+    user_id=row[0]
+
+    return user_id
