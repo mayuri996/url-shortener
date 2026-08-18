@@ -154,7 +154,6 @@ def registerUser(user: UserRegister):
 def loginUser(user:UserLogin):
     email=user.email
     password=user.password
-    #TODO: authenticate user
     password_hash=findUser(email)
 
     if password_hash is None:
@@ -167,7 +166,6 @@ def loginUser(user:UserLogin):
     password_match=verify_password(password,password_hash)
 
     if not password_match:
-        #TODO: handle return
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
@@ -177,13 +175,9 @@ def loginUser(user:UserLogin):
     user_id=findUserId(email)
     token_expiry_time=datetime.now(timezone.utc)+JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 
-
-
     jwt_access_token=create_jwt_access_token({"sub":user_id,"exp":token_expiry_time})
 
-    return {
-        "message":"Login successful"
-    }
+    return JWTToken(access_token=jwt_access_token, token_type="bearer")
 
 #this api redirects to the long url using the short url code
 @app.get("/{short_code}")

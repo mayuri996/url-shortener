@@ -158,3 +158,8 @@ def test_login_user():
 
     assert login_response.status_code==200
 
+    login_response_data=login_response.json()
+
+    assert "access_token" in login_response_data
+    assert login_response_data["token_type"]=="bearer"
+
