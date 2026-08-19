@@ -10,6 +10,7 @@ import bcrypt
 import jwt
 import datetime
 from datetime import timezone,timedelta,datetime
+from fastapi import Depends
 
 app=FastAPI()
 load_dotenv()
@@ -80,6 +81,38 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+#Dependencies
+def verify_user(request:Request):
+    #1. Check if token is valid
+    #2. Decode the token
+    #3. Extract user_id from it
+    #4. Return the user_id of the verified user
+    authorization=request.headers.get("Authorization")
+
+    if authorization is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header missing"
+        )
+
+    auth_token=authorization.split(" ")
+
+    if len(auth_token)!=2 or auth_token[0]!="Bearer":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header"
+        )
+
+    token_value=auth_token[1]
+
+    payload=decode_jwt_access_token(token_value)
+
+    user_id=payload["sub"]
+
+    return int(user_id)
+
+
+# API end points
 @app.get('/')
 def home():
     return{
@@ -87,9 +120,13 @@ def home():
     }
 
 #this api returns a shortened url
-#call it when long url needs to be converted to short url
+#Return a short url for a given long url and user id
 @app.post('/shorten')
-def shortenUrl(request:Request,valid_url:validUrl):
+def shortenUrl(request:Request,valid_url:validUrl,user_id=Depends(verify_user)):
+    #1. Check if the ip is rate limited
+    #2. If short code exists for the long url and the given user id, return the short url
+    #3. Else create the short code for the user id, and return the short url
+
     long_url=str(valid_url.url)
     client_ip=request.client.host
 
@@ -99,10 +136,10 @@ def shortenUrl(request:Request,valid_url:validUrl):
             detail="Too many requests. Please try again later."
         )
 
-    code=getCodeForUrl(long_url)
+    code=getCodeForUrl(long_url,user_id)
 
     if code is None:
-        code=saveUrl(long_url)
+        code=saveUrl(long_url,user_id)
         
     short_url=f"{BASE_URL}/{code}"
 
@@ -112,10 +149,10 @@ def shortenUrl(request:Request,valid_url:validUrl):
     
 #this api returns number of times a short url was clicked
 @app.get("/stats/{short_code}")
-def getAnalytics(short_code:str):
-    stats=getStats(short_code)
+def getAnalytics(short_code:str, user_id=Depends(verify_user)):
+    stats=getStats(short_code,user_id)
 
-    #if given short url does not exist, return 404
+    #if given short url does not exist for the given user id, return 404
     if stats is None:
         raise HTTPException(
             status_code=404,
@@ -175,7 +212,9 @@ def loginUser(user:UserLogin):
     user_id=findUserId(email)
     token_expiry_time=datetime.now(timezone.utc)+JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 
-    jwt_access_token=create_jwt_access_token({"sub":user_id,"exp":token_expiry_time})
+    payload={"sub":str(user_id),"exp":token_expiry_time}
+
+    jwt_access_token=create_jwt_access_token(payload)
 
     return JWTToken(access_token=jwt_access_token, token_type="bearer")
 
@@ -196,18 +235,19 @@ def redirectUrl(short_code:str):
         status_code=307)
 
 #stores the long_url and its code in storage
-def saveUrl(long_url:str):
+def saveUrl(long_url:str,user_id:int):
 
-    #first add long_url in urls
-    #then use the last inserted id to encode long_url to base62 
-    #then update the row with the code
-    #and then return the code
+    #1. Add long_url in urls for the given user id
+    #2. Use the last inserted id to encode long_url to base62 
+    #3. Update the row with the code
+    #4. Return the code
+
 
     cursor.execute("INSERT INTO urls (" \
-    "long_url, created_at) " \
-    "VALUES (%s,NOW()) " \
+    "long_url, created_at,user_id) " \
+    "VALUES (%s,NOW(),%s) " \
     "RETURNING url_id",
-    (long_url,))
+    (long_url,user_id))
 
     url_id=cursor.fetchone()[0]
 
@@ -237,11 +277,12 @@ def getLongUrl(code:str):
     return row[0]
 
 
-#retrieves the code for a given long url
-def getCodeForUrl(long_url:str):
+#retrieves the code for a given long url and user id
+def getCodeForUrl(long_url:str,user_id:int):
     cursor.execute("SELECT code " \
     "FROM urls " \
-    "WHERE long_url=%s",(long_url,))
+    "WHERE long_url=%s " \
+    "AND user_id=%s",(long_url,user_id))
 
     row=cursor.fetchone()
 
@@ -274,13 +315,14 @@ def updateStats(code:str):
     "WHERE code=%s",(code,))
     conn.commit()
 
-def getStats(code:str):
+def getStats(code:str,user_id:int):
     cursor.execute("SELECT click_count, "\
     "to_char(created_at, 'dd Mon YYYY HH24:MI:SS OF') as created_at, " \
     "to_char(last_clicked_at,'dd Mon YYYY HH24:MI:SS OF') as last_clicked_at, " \
     "long_url    " \
     "FROM urls " \
-    "WHERE code=%s",(code,))
+    "WHERE code=%s " \
+    "AND user_id=%s",(code,user_id))
 
     row=cursor.fetchone()
 
@@ -318,24 +360,25 @@ def hash_password(password:str):
     return hashed.decode("utf-8")
 
 def saveUser(user:UserRegister):
+    #1. First check if user already exists in db
+    #2. Return false when user already exist
+    #3. Else, hash user's password
+    #3. Save new user with hashed password
     email=user.email
     user_name=user.user_name
     password=user.password
 
-    #first check if user already exists in db
     cursor.execute("SELECT user_id " \
     "FROM users " \
     "WHERE email=%s",(email,))
 
     row=cursor.fetchone()
-
-    #return false when user already exist
+    
     if row is not None:
         return False
 
     password_hash=hash_password(password)
 
-    #else, save new user
     cursor.execute("INSERT INTO users(" \
     "email,user_name,password_hash) " \
     "VALUES (%s,%s,%s)",(email,user_name,password_hash))
@@ -345,7 +388,8 @@ def saveUser(user:UserRegister):
 
 
 def findUser(email:str):
-
+    #If user registered, then return email id
+    #Else user does not exist, so they are not registered
     cursor.execute("SELECT password_hash " \
     "FROM users " \
     "WHERE email=%s",(email,))
@@ -361,8 +405,10 @@ def findUser(email:str):
     return password_hash
 
 def verify_password(password:str,password_hash:str):
-    
-    #check user password
+    #Check if the password matches the stored password_hash
+    #use bcrypt to hash password and check against stored password_hash
+    #if not match, then return false
+    #else return true
     byte_curr_password=password.encode("utf-8")
     byte_password_hash=password_hash.encode("utf-8")
 
@@ -383,6 +429,8 @@ def create_jwt_access_token(payload:dict):
 
 
 def findUserId(email:str):
+    #Find user id by email
+    #If not found, then user does not exist
     cursor.execute("SELECT user_id " \
     "FROM users " \
     "WHERE email=%s",(email,))
@@ -395,3 +443,19 @@ def findUserId(email:str):
     user_id=row[0]
 
     return user_id
+
+def decode_jwt_access_token(token:str):
+    try:
+        decoded_jwt_token=jwt.decode(token,JWT_SECRET_KEY,JWT_ALGORITHM)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="Token expired"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
+
+    return decoded_jwt_token
