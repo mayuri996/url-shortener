@@ -40,7 +40,6 @@ function Login(){
             navigate("/")
         }
         catch (error){
-            console.log(error)
             alert("Unable to connect to server. Please try again.")
         }
         
