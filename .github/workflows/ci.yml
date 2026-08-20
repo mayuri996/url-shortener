@@ -23,6 +23,7 @@ jobs:
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
+        JWT_SECRET_KEY: test-secret-key
 
     steps:
       - uses: actions/checkout@v4
