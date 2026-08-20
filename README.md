@@ -22,11 +22,17 @@ A full-stack URL Shortener built using React, FastAPI, and PostgreSQL
 ## Tech Stack
 
 **Frontend:** React, React Router, JavaScript, CSS
+
 **Backend:** Python, FastAPI
+
 **Database:** PostgreSQL
-**Authentication:** bcrypt,JWT
-**Testing**: pytest,Vitest
-**CI/CD:** Github Actions
+
+**Authentication:** bcrypt, JWT
+
+**Testing**: pytest, Vitest
+
+**CI/CD:** GitHub Actions
+
 **Deployment:** Vercel, Render
 
 ## Features
