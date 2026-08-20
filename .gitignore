@@ -1,6 +1,7 @@
 # Python
 backend/__pycache__/
 backend/*.pyc
+.pytest_cache/
 
 # Python virtual environment
 venv/
