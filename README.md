@@ -3,7 +3,7 @@
 A URL Shortener built using React, FastAPI, and PostgreSQL
 
 ## Link
-[URL Shortener](https://url-shortener-mayuri9.vercel.app/)
+[URL Shortener](https://url-shortener-mayuri9.vercel.app/login)
 
 ## Screenshots
 
