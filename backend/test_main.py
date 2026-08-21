@@ -6,7 +6,7 @@ client=TestClient(app)
 
 @pytest.fixture(autouse=True)
 def reset_test_state():
-    #reset rate limiter,users, and url records before each test
+    #reset rate limiter,user, url records , and cookies before each test
     rate_limit_store.clear()
     cursor.execute("DELETE FROM URLS")
     cursor.execute("DELETE FROM USERS")
