@@ -13,6 +13,7 @@ function Login(){
         try{
             const response = await fetch(`${BACKEND_URL}/login`,{
                 method:"POST",
+                credentials:"include",
                 headers:{
                     "Content-Type":"application/json"
                 },
@@ -34,8 +35,6 @@ function Login(){
             }
             
             //if successfully logged in 
-            //store token in session storage
-            sessionStorage.setItem("access_token",result.access_token)
             setIsLoggedIn(true)
             navigate("/")
         }

@@ -11,8 +11,6 @@ function Analytics(){
     const [createdAt,setCreatedAt]=useState("");
     const [lastClickedAt,setLastClickedAt]=useState("");
 
-    const token=sessionStorage.getItem("access_token")
-
     async function handleGetStats(){
         setLoading(true);
         setClickCount("");
@@ -34,9 +32,9 @@ function Analytics(){
             
             const response=await fetch(`${BACKEND_URL}/stats/${shortCode}`,{
                 "method":"GET",
+                "credentials":"include",
                 headers:{
-                    "Content-Type":"application/json",
-                    "Authorization":`Bearer ${token}`
+                    "Content-Type":"application/json"
                 }
             });
             

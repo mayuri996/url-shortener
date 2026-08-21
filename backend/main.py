@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException, Request
+from fastapi import FastAPI,HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl, EmailStr
 from fastapi.responses import RedirectResponse
@@ -40,11 +40,6 @@ class UserLogin(BaseModel):
     email:EmailStr
     password:str
 
-#model for jwt token
-class JWTToken(BaseModel):
-    access_token:str
-    token_type:str
-
 #stores mapping of code to long_url
 conn=psycopg.connect(
     host=os.getenv("DB_HOST"),
@@ -77,33 +72,25 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["GET","POST","OPTIONS"],
+    allow_headers=["Content-Type"]
 )
 
 #Dependencies
 def verify_user(request:Request):
-    #1. Check if token is valid
+    #1. Check if token is present
+    #2. If not present, return 401
     #2. Decode the token
     #3. Extract user_id from it
-    #4. Return the user_id of the verified user
-    authorization=request.headers.get("Authorization")
+    #4. Return the user_id of the user
+    
+    token_value=request.cookies.get("access_token")
 
-    if authorization is None:
+    if token_value is None:
         raise HTTPException(
             status_code=401,
-            detail="Authorization header missing"
+            detail="Authentication cookie missing"
         )
-
-    auth_token=authorization.split(" ")
-
-    if len(auth_token)!=2 or auth_token[0]!="Bearer":
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authorization header"
-        )
-
-    token_value=auth_token[1]
 
     payload=decode_jwt_access_token(token_value)
 
@@ -188,7 +175,7 @@ def registerUser(user: UserRegister):
     
 #define login endpoint
 @app.post("/login")
-def loginUser(user:UserLogin):
+def loginUser(user:UserLogin, response: Response):
     email=user.email
     password=user.password
     password_hash=findUser(email)
@@ -216,7 +203,21 @@ def loginUser(user:UserLogin):
 
     jwt_access_token=create_jwt_access_token(payload)
 
-    return JWTToken(access_token=jwt_access_token, token_type="bearer")
+    #use cookie to store jwt token
+    #set expiry time same as jwt token expiry time
+    #allow cross-site cookie
+    response.set_cookie(
+        key="access_token",
+        value=jwt_access_token,
+        max_age=15*60,
+        httponly=True,
+        secure=True,
+        samesite="none"
+    )
+
+    return {
+        "message":"Login Successful"
+    }
 
 #this api redirects to the long url using the short url code
 @app.get("/{short_code}")

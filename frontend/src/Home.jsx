@@ -8,7 +8,6 @@ function App() {
   const BACKEND_URL=import.meta.env.VITE_BACKEND_URL
   const [loading,setLoading]=useState(false)
 
-  const token=sessionStorage.getItem("access_token")
   async function  handleShortenUrl(){
     setLoading(true);
     setShortUrl("");
@@ -16,9 +15,9 @@ function App() {
     try {
       const response=await fetch(`${BACKEND_URL}/shorten`,{
         "method":"POST",
+        "credentials":"include",
         headers:{
-          "Content-Type":"application/json",
-          "Authorization":`Bearer ${token}`
+          "Content-Type":"application/json"
         },
         body:JSON.stringify({url})}
       );
