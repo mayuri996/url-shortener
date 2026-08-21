@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 function Analytics(){
     const [clickCount,setClickCount]=useState("");
@@ -10,6 +11,10 @@ function Analytics(){
     const [loading,setLoading]=useState(false);
     const [createdAt,setCreatedAt]=useState("");
     const [lastClickedAt,setLastClickedAt]=useState("");
+    
+    const [showLoginButton,setShowLoginButton]=useState(false);
+
+    const navigate=useNavigate();
 
     async function handleGetStats(){
         setLoading(true);
@@ -46,6 +51,10 @@ function Analytics(){
                 setLastClickedAt(result.last_clicked_at);
                 setLongUrl(result.long_url);
             }
+            else if (response.status===401){
+                setShowLoginButton(true);
+                alert(result.detail);
+            }
             else{
                 alert(result.detail);
             }
@@ -56,6 +65,11 @@ function Analytics(){
         }
         setLoading(false);
     }
+
+    function handleLogin(){
+        navigate("/login");
+    }
+
     return (
         <div>
 
@@ -98,6 +112,15 @@ function Analytics(){
             href={longUrl}
             target="_blank"
             rel="noopener noreferrer">{longUrl}</a></p>}
+
+            <br></br>
+            <br></br>
+
+            {showLoginButton && (
+                <button
+                className="click-button"
+                onClick={handleLogin}>Login</button>
+            )}
         </div>
     );
 }
