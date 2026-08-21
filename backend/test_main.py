@@ -47,12 +47,9 @@ def test_shorten_url():
         "url":"https://test-shorten-url.com"
     })
 
-    print(shorten_response)
-
     assert shorten_response.status_code==200
 
     data=shorten_response.json()
-
 
     assert "short_url" in data
 
@@ -278,4 +275,81 @@ def test_authentication():
     })
 
     assert auth_response.status_code==401
+
+def test_authorization():
+    #Test that 2 different users should not be able to access each other's short urls
+    #Register both users
+    register_user_A=client.post("/register",json={
+        "email":"usera@example.com",
+        "user_name":"usera",
+        "password":"string"
+    })
+
+    assert register_user_A.status_code==200
+
+    register_user_B=client.post("/register",json={
+        "email":"userb@example.com",
+        "user_name":"userb",
+        "password":"string"
+    })
+
+    assert register_user_B.status_code==200
+
+    #Login user A
+    login_user_A=client.post("/login",json={
+        "email":"usera@example.com",
+        "password":"string"
+    })
+
+    assert login_user_A.status_code==200
+
+    assert "access_token" in login_user_A.cookies
+
+    #create short url through user A account
+
+    shorten_url_user_A=client.post("/shorten",json={
+        "url":"http://test-shorten-url-user-A.com,"
+    })
+
+    assert shorten_url_user_A.status_code==200
+
+    data_user_A=shorten_url_user_A.json()
+    
+    assert "short_url" in data_user_A
+
+    assert data_user_A["short_url"].startswith(f"{BASE_URL}/")
+
+    short_url_user_A=data_user_A["short_url"]
+
+    parts=short_url_user_A.split("/")
+
+    code=parts[-1]
+
+    #Try to check stats for short url created by user A when user A logged in
+
+    print(code)
+
+    check_stats=client.get(f"/stats/{code}")
+
+    assert check_stats.status_code==200
+
+    #clear user A session
+
+    client.cookies.clear()
+
+    #Login user b
+    login_user_B=client.post("/login",json={
+        "email":"userb@example.com",
+        "password":"string"
+    })
+
+    assert login_user_B.status_code==200
+
+    assert "access_token" in login_user_B.cookies
+
+    #Try to check stats for short url created by user A when user B logged in
+
+    check_stats=client.get(f"/stats/{code}")
+
+    assert check_stats.status_code==404
 
