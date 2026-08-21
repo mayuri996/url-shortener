@@ -10,7 +10,7 @@ def reset_test_state():
     rate_limit_store.clear()
     cursor.execute("DELETE FROM URLS")
     cursor.execute("DELETE FROM USERS")
-
+    client.cookies.clear()
     conn.commit()
 
 def test_home():
@@ -47,9 +47,12 @@ def test_shorten_url():
         "url":"https://test-shorten-url.com"
     })
 
+    print(shorten_response)
+
     assert shorten_response.status_code==200
 
     data=shorten_response.json()
+
 
     assert "short_url" in data
 

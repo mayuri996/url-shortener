@@ -26,6 +26,10 @@ JWT_ALGORITHM="HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=timedelta(minutes=15)
 JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY")
 
+#environment for http only cookie, to use correct settings in development and production
+ENVIRONMENT=os.getenv("ENVIRONMENT")
+IS_PRODUCTION=True if ENVIRONMENT=="production" else False
+
 #validate the url 
 class validUrl(BaseModel):
     url:HttpUrl
@@ -211,8 +215,8 @@ def loginUser(user:UserLogin, response: Response):
         value=jwt_access_token,
         max_age=15*60,
         httponly=True,
-        secure=True,
-        samesite="none"
+        secure=IS_PRODUCTION,
+        samesite="none" if IS_PRODUCTION else "lax"
     )
 
     return {
