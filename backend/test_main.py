@@ -40,19 +40,11 @@ def test_shorten_url():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
-
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
-
-    token=login_response_data["access_token"]
+    assert "access_token" in login_response.cookies
 
     #shorten
     shorten_response=client.post("/shorten",json={
         "url":"https://test-shorten-url.com"
-    },
-    headers={
-        "Authorization":f"Bearer {token}"
     })
 
     assert shorten_response.status_code==200
@@ -81,19 +73,11 @@ def test_shorten_redirect_url():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
-
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
-
-    token=login_response_data["access_token"]
+    assert "access_token" in login_response.cookies
 
     #shorten
     shorten_response=client.post("/shorten",json={
         "url":"https://test-shorten-url.com"
-    },
-    headers={
-        "Authorization":f"Bearer {token}"
     })
 
     assert shorten_response.status_code==200
@@ -134,19 +118,11 @@ def test_shorten_stats():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
-
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
-
-    token=login_response_data["access_token"]
+    assert "access_token" in login_response.cookies
 
     #shorten
     shorten_response=client.post("/shorten",json={
         "url":"http://test-shorten-stats.com"
-    },
-    headers={
-        "Authorization":f"Bearer {token}"
     })
 
     assert shorten_response.status_code==200
@@ -164,9 +140,7 @@ def test_shorten_stats():
     code=parts[-1]
 
     #stats
-    stats_response=client.get(f"/stats/{code}",headers={
-            "Authorization":f"Bearer {token}"
-        })
+    stats_response=client.get(f"/stats/{code}")
 
     assert stats_response.status_code==200
 
@@ -195,19 +169,11 @@ def test_shorten_redirect_stats():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
-
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
-
-    token=login_response_data["access_token"]
+    assert "access_token" in login_response.cookies
 
     #shorten
     shorten_response=client.post("/shorten",json={
         "url":"https://test-shorten-redirect-stats.com"
-    },
-    headers={
-        "Authorization":f"Bearer {token}"
     })
 
     assert shorten_response.status_code==200
@@ -232,9 +198,7 @@ def test_shorten_redirect_stats():
 
     #stats
 
-    stats_response=client.get(f"/stats/{code}",headers={
-        "Authorization":f"Bearer {token}"
-    })
+    stats_response=client.get(f"/stats/{code}")
     assert stats_response.status_code==200
     stats_response_data=stats_response.json()
 
@@ -261,27 +225,19 @@ def test_rate_limit():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
 
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
-
-    token=login_response_data["access_token"]
+    assert "access_token" in login_response.cookies
 
     #rate limit verify
     for i in range(5):
         response=client.post("/shorten",json={
             "url":"https://test-rate-limit.com"
-        },headers={
-            "Authorization":f"Bearer {token}"
         })
 
         assert response.status_code==200
 
     response=client.post("/shorten",json={
         "url":"https://test-rate-limit.com"
-        },headers={
-            "Authorization":f"Bearer {token}"
         })
 
     assert response.status_code==429
@@ -311,8 +267,12 @@ def test_login_user():
 
     assert login_response.status_code==200
 
-    login_response_data=login_response.json()
+    assert "access_token" in login_response.cookies
 
-    assert "access_token" in login_response_data
-    assert login_response_data["token_type"]=="bearer"
+def test_authentication():
+    auth_response=client.post("/shorten",json={
+        "url":"https://example.com"
+    })
+
+    assert auth_response.status_code==401
 
