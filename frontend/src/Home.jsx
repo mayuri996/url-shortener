@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import {NavLink} from "react-router-dom";
 import './App.css'
+import {useNavigate} from "react-router-dom";
 
 function App() {
   const [url,setUrl]=useState("")
   const [shortUrl,setShortUrl]=useState("")
   const BACKEND_URL=import.meta.env.VITE_BACKEND_URL
   const [loading,setLoading]=useState(false)
+
+  const [showLoginButton,setShowLoginButton]=useState(false)
+
+  const navigate=useNavigate();
 
   async function  handleShortenUrl(){
     setLoading(true);
@@ -24,16 +29,25 @@ function App() {
 
       const result=await response.json();
       if (response.ok) setShortUrl(result.short_url);
+      
       else if (typeof result.detail=="string"){
+        //handle error when user not logged in
+        
         alert(result.detail);
+        setShowLoginButton(true);
       }
       else alert(result.detail[0].msg);
     }
     catch (error) {
+      console.log(error)
       alert("Unable to connect to the server. Please try again.");
     }
     setLoading(false);
     
+  }
+
+  function handleLogin(){
+    navigate("/login");
   }
   return (
     <div>
@@ -69,6 +83,16 @@ function App() {
       </p>
       )
     }
+    <br></br>
+    <br></br>
+
+    {showLoginButton && (
+        <button
+        className="click-button"
+        onClick={handleLogin}>Login</button>
+    )}
+
+
     </div>
 
     
